@@ -50,6 +50,8 @@ class YaUploader:
 
 
 def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, albums):
+    print('Началась загрузка файлов на Яндекс Диск')
+
     uploader.create_folder('VkBackup/')
     backup_folder = f'VkBackup/{name}/'
     uploader.create_folder(backup_folder)
@@ -59,8 +61,10 @@ def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, al
         photos = backuper.get_photos(album.lower())
 
         for photo in photos:
-            photo_path = f'VkBackup/{name}/{album}/' + str(photo['likes']['count']) + '.jpg'
+            photo_path = f'VkBackup/{name}/{album}/{str(photo["likes"]["count"])}_{photo["date"]}.jpg'
             uploader.upload_from_url(photo_path, photo['sizes'][-1]['url'])
+
+    print('Загрузка завершена')
 
 
 if __name__ == '__main__':
