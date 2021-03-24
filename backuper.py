@@ -1,6 +1,8 @@
 import requests
 import datetime
 
+from vk_token import vk_token
+
 
 class VkBackup:
     url = 'https://api.vk.com/method/'
@@ -13,11 +15,17 @@ class VkBackup:
             'v': self.version
         }
 
-    def get_photos(self, vk_album):
+    def get_photos(self, vk_album, owner_id=None, count=50):
         photos_url = self.url + 'photos.get'
-        photos_params = {'album_id': vk_album, 'extended': 1, 'photo_sizes': 1}
+        photos_params = {'owner_id': owner_id, 'album_id': vk_album, 'extended': 1, 'photo_sizes': 1, 'count': count}
         response = requests.get(photos_url, params={**self.params, **photos_params})
         return response.json()['response']['items']
+
+    def get_user(self, profile_id):
+        user_url = self.url + 'users.get'
+        user_params = {'user_ids': profile_id}
+        response = requests.get(user_url, params={**self.params, **user_params})
+        return response.json()
 
 
 class YaUploader:
@@ -49,8 +57,8 @@ class YaUploader:
         return response.status_code
 
 
-def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, albums):
-    print('Началась загрузка файлов на Яндекс Диск')
+def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, albums: list, user_id=None, count=50):
+    print('\nНачалась загрузка файлов на Яндекс Диск')
 
     uploader.create_folder('VkBackup/')
     backup_folder = f'VkBackup/{name}/'
@@ -58,7 +66,7 @@ def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, al
 
     for album in albums:
         uploader.create_folder(backup_folder + album)
-        photos = backuper.get_photos(album.lower())
+        photos = backuper.get_photos(album.lower(), user_id, count)
 
         for photo in photos:
             photo_path = f'VkBackup/{name}/{album}/{str(photo["likes"]["count"])}_{photo["date"]}.jpg'
@@ -68,12 +76,24 @@ def create_backup_yandex(name: str, uploader: YaUploader, backuper: VkBackup, al
 
 
 if __name__ == '__main__':
-    ya_uploader = YaUploader(yandex)
-    vk_backuper = VkBackup(vk, '5.130')
-
-    albums_list = ['Profile', 'Wall']
-
     backup_name = datetime.datetime.isoformat(datetime.datetime.now(), sep='-')
     backup_name = backup_name.replace(':', '-').replace('.', '-')
 
-    create_backup_yandex(backup_name, ya_uploader, vk_backuper, albums_list)
+    albums_list = ['Profile', 'Wall']
+    vk_backuper = VkBackup(vk_token, '5.130')
+
+    user_id = input('Введите id пользователя (оставьте пустым для своего профиля): ')
+
+    if user_id == '':
+        user_id = None
+
+    try:
+        user_response = vk_backuper.get_user(user_id)
+        user_response = user_response['response']
+
+        ya_token = input('Введите токен Яндекс Диска: ')
+        ya_uploader = YaUploader(ya_token)
+
+        create_backup_yandex(backup_name, ya_uploader, vk_backuper, albums_list, user_id)
+    except KeyError:
+        print('Некорректный id пользователя')
