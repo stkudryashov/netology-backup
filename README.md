@@ -1,2 +1,2 @@
-# netology-backup
+# netology-backuper
 Study task in Netology
