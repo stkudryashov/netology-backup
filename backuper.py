@@ -1,9 +1,6 @@
 import requests
 from pprint import pprint
 
-vk = 'token'
-yandex = 'token'
-
 
 class VkBackup:
     url = 'https://api.vk.com/method/'
@@ -20,7 +17,7 @@ class VkBackup:
         photos_url = self.url + 'photos.get'
         photos_params = {'album_id': album, 'extended': 1, 'photo_sizes': 1}
         response = requests.get(photos_url, params={**self.params, **photos_params})
-        pprint(response.json()['response']['items'])
+        return response.json()['response']['items']
 
 
 class YaUploader:
@@ -35,21 +32,15 @@ class YaUploader:
             'Authorization': 'OAuth {}'.format(self.token)
         }
 
-    def _get_upload_url(self, yandex_path: str):
-        get_url = self.url + 'resources/upload'
-        headers = self.get_headers()
-        params = {'path': yandex_path, 'overwrite': True}
-        response = requests.get(get_url, headers=headers, params=params)
-        return response.json()['href']
-
-    def upload(self, yandex_path: str, local_path: str):
-        upload_url = self._get_upload_url(yandex_path)
-        response = requests.put(upload_url, data=open(local_path, 'rb'))
-        return response.status_code
+    def upload_from_url(self, yandex_path: str, photo_url: str):
+        upload_url = self.url + 'resources/upload'
+        upload_params = {'path': yandex_path, 'url': photo_url}
+        response = requests.post(upload_url, headers=self.get_headers(), params=upload_params)
+        return response
 
 
 if __name__ == '__main__':
     uploader = YaUploader(yandex)
     vk_backup = VkBackup(vk, '5.130')
-
-    vk_backup.get_photos('profile')
+    photos = vk_backup.get_photos('profile')
+    uploader.upload_from_url('VK', photos[0]['sizes'][-1]['url'])
